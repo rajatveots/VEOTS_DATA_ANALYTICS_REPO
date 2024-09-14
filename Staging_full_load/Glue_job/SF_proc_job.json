@@ -1,0 +1,85 @@
+{
+	"jobConfig": {
+		"name": "SF_proc_job",
+		"description": "",
+		"role": "arn:aws:iam::747036646062:role/AWSGlueServiceRole-Mongodb",
+		"command": "glueetl",
+		"version": "3.0",
+		"runtime": null,
+		"workerType": "G.1X",
+		"numberOfWorkers": 2,
+		"maxCapacity": 2,
+		"jobRunQueuingEnabled": null,
+		"maxRetries": 0,
+		"timeout": 30,
+		"maxConcurrentRuns": 1,
+		"security": "none",
+		"scriptName": "SF_proc_job.py",
+		"scriptLocation": "s3://aws-glue-assets-747036646062-ap-south-1/scripts/",
+		"language": "python-3",
+		"spark": true,
+		"sparkConfiguration": "standard",
+		"jobParameters": [
+			{
+				"key": "--dbname",
+				"value": "staging-veots",
+				"existing": false
+			},
+			{
+				"key": "--sfDatabase",
+				"value": "VEOTS_DB",
+				"existing": false
+			},
+			{
+				"key": "--sfPassword",
+				"value": "Ravishing123$",
+				"existing": false
+			},
+			{
+				"key": "--sfRole",
+				"value": "VEOTS_ANALYST",
+				"existing": false
+			},
+			{
+				"key": "--sfSchema",
+				"value": "ANALYTCS",
+				"existing": false
+			},
+			{
+				"key": "--sfURL",
+				"value": "https://jy92892.ap-south-1.aws.snowflakecomputing.com",
+				"existing": false
+			},
+			{
+				"key": "--sfUser",
+				"value": "GLUE_USER",
+				"existing": false
+			},
+			{
+				"key": "--sfWarehouse",
+				"value": "COMPUTE_WH",
+				"existing": false
+			}
+		],
+		"tags": [],
+		"jobMode": "DEVELOPER_MODE",
+		"createdOn": "2024-05-28T11:01:55.987Z",
+		"developerMode": true,
+		"connectionsList": [],
+		"temporaryDirectory": "s3://aws-glue-assets-747036646062-ap-south-1/temporary/",
+		"logging": true,
+		"glueHiveMetastore": true,
+		"etlAutoTuning": true,
+		"metrics": true,
+		"observabilityMetrics": true,
+		"dependentPath": "s3://aws-glue-assets-747036646062-ap-south-1/spark-snowflake_2.12-2.11.2-spark_3.3.jar,s3://aws-glue-assets-747036646062-ap-south-1/snowflake-jdbc-3.13.28.jar",
+		"bookmark": "job-bookmark-disable",
+		"sparkPath": "s3://aws-glue-assets-747036646062-ap-south-1/sparkHistoryLogs/",
+		"flexExecution": false,
+		"minFlexWorkers": null,
+		"maintenanceWindow": null
+	},
+	"hasBeenSaved": false,
+	"usageProfileName": null,
+	"script": "import sys\nfrom awsglue.transforms import *\nfrom awsglue.utils import getResolvedOptions\nfrom pyspark.context import SparkContext\nfrom awsglue.context import GlueContext\nfrom awsglue.job import Job\n\n## @params: [JOB_NAME]\nargs = getResolvedOptions(sys.argv, ['dbname','sfURL','sfRole','sfUser','sfPassword','sfDatabase','sfSchema','sfWarehouse'])\ndbname = args['dbname']\nsfURL = args['sfURL']\nsfRole = args['sfRole']\nsfUser = args['sfUser']\nsfPassword = args['sfPassword']\nsfDatabase = args['sfDatabase']\nsfSchema = args['sfSchema']\nsfWarehouse = args['sfWarehouse']\n\nsc = SparkContext()\nglueContext = GlueContext(sc)\nspark = glueContext.spark_session\njob = Job(glueContext)\n\n# args = getResolvedOptions(sys.argv,['dbname'])\n# job.init(args['JOB_NAME'], args)\n\nfrom py4j.java_gateway import java_import\njava_import(spark._jvm, \"net.snowflake.spark.snowflake\")\n\nfrom pyspark.sql.functions import col\nsfOptions = {\n\"sfURL\" : sfURL,\n\"sfRole\" :sfRole,\n\"sfUser\" : sfUser,\n\"sfPassword\" :sfPassword,\n\"sfDatabase\" : sfDatabase,\n\"sfSchema\" : sfSchema,\n\"sfWarehouse\" : sfWarehouse\n}\n\nquery = f\"CALL ANALYTICS.insert_overwrite_loop('{dbname}')\"\nsc._gateway.jvm.net.snowflake.spark.snowflake.Utils.runQuery(sfOptions, query)\n\njob.commit()"
+}

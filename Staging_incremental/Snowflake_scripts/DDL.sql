@@ -1,0 +1,42 @@
+CREATE STORAGE INTEGRATION veots_int
+  TYPE = EXTERNAL_STAGE
+  STORAGE_PROVIDER = 'S3'
+  ENABLED = TRUE
+  STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::747036646062:role/s3-sf-role'
+  STORAGE_ALLOWED_LOCATIONS = ('s3://sf-stage-veots')
+  
+CREATE FILE FORMAT JSON TYPE = 'JSON';
+
+
+CREATE STAGE VEOTS_STAGE
+  STORAGE_INTEGRATION = veots_int
+  URL = 's3://sf-stage-veots/'
+  FILE_FORMAT = JSON;
+
+CREATE OR REPLACE MASKING POLICY PII_MASK AS (val string) returns string ->
+  CASE
+    WHEN current_role() IN ('VEOTS_DEV') THEN VAL
+    ELSE '*********'
+  END;
+ 
+ 
+ 
+create or replace masking policy  pii_mask_concent AS
+(val string, isReportConsentGiven BOOLEAN) returns string ->
+case
+when current_role() IN ('VEOTS_DEV') and isReportConsentGiven =TRUE then VAL
+else '********'
+end;
+
+ alter TABLE if exists PRODUCTS_FAKEDETAILS modify column FAKECONTACT set masking policy pii_mask_concent using (FAKECONTACT, isReportConsentGiven);
+
+ALTER TABLE IF EXISTS customers MODIFY COLUMN DOB SET MASKING POLICY PII_MASK;
+
+ALTER TABLE IF EXISTS customers MODIFY COLUMN GENDER SET MASKING POLICY PII_MASK;
+
+ALTER TABLE IF EXISTS customers MODIFY COLUMN EMAIL SET MASKING POLICY PII_MASK;
+
+ALTER TABLE IF EXISTS customers MODIFY COLUMN PHONENUM SET MASKING POLICY PII_MASK;
+
+ALTER TABLE IF EXISTS SUBCLIENTS MODIFY COLUMN EMAILID SET MASKING POLICY PII_MASK;
+ALTER TABLE IF EXISTS SUBCLIENTS MODIFY COLUMN USERID SET MASKING POLICY PII_MASK;
